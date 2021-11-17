@@ -1,10 +1,15 @@
 package chipyard
 
 import freechips.rocketchip.config.{Config, Parameters}
-import freechips.rocketchip.diplomacy.{AsynchronousCrossing}
+import freechips.rocketchip.diplomacy.{AsynchronousCrossing, SynchronousCrossing}
+import freechips.rocketchip.devices.tilelink.{BootROMLocated}
+import freechips.rocketchip.tile.{XLen, RocketTileParams}
+import freechips.rocketchip.rocket.{RocketCoreParams, ICacheParams, DCacheParams, MulDivParams}
+import freechips.rocketchip.subsystem.{RocketTilesKey, RocketCrossingKey, RocketCrossingParams, TileMasterPortParams, SystemBusKey, SystemBusParams, CacheBlockBytes}
 
 class WithComet extends Config((site, here, up) => {
   case BuildTop => (p: Parameters) => new CometCPUComplex()(p)
+  case BootROMLocated(x) => None
 })
 
 class CometBaseConfig extends Config(
@@ -36,7 +41,6 @@ class CometBaseConfig extends Config(
   new chipyard.iobinders.WithDividerOnlyClockGenerator ++
 
   // Design configuration
-  new chipyard.config.WithBootROM ++                             // use default bootrom
   new chipyard.config.WithUART ++                                // add a UART
   new chipyard.config.WithL2TLBs(1024) ++                        // use L2 TLBs
   new chipyard.config.WithNoSubsystemDrivenClocks ++             // drive the subsystem diplomatic clocks from ChipTop instead of using implicit clocks
@@ -50,14 +54,38 @@ class CometBaseConfig extends Config(
   new freechips.rocketchip.system.BaseConfig
 )
 
+class CometCoreConfig extends Config((site, here, up) => {
+  case XLen => 32
+  case SystemBusKey => SystemBusParams(
+    beatBytes = 16,
+    blockBytes = site(CacheBlockBytes)
+  )
+  case RocketTilesKey => List(RocketTileParams(
+      core = RocketCoreParams(
+        useVM = false,
+        mulDiv = Some(MulDivParams(mulUnroll = 8, mulEarlyOut = true, divEarlyOut = true))),
+      dcache = Some(DCacheParams(
+        rowBits = site(SystemBusKey).beatBits,
+        nSets = 256,
+        nWays = 4,
+        nMSHRs = 0,
+        blockBytes = site(CacheBlockBytes))),
+      icache = Some(ICacheParams(
+        rowBits = site(SystemBusKey).beatBits,
+        nSets = 256,
+        nWays = 4,
+        itimAddr = Some(0x300000),
+        blockBytes = site(CacheBlockBytes)))))
+  case RocketCrossingKey => List(RocketCrossingParams(
+    crossingType = SynchronousCrossing(),
+    master = TileMasterPortParams()
+  ))
+})
+
 class CometConfig extends Config(
   new freechips.rocketchip.subsystem.WithDefaultMMIOPort ++  // add default external master port
   new freechips.rocketchip.subsystem.WithDefaultSlavePort ++ // add default external slave port
-  new freechips.rocketchip.subsystem.WithNMemoryChannels(0) ++ // remove offchip mem port
-  new freechips.rocketchip.subsystem.WithNBanks(0) ++
-  new freechips.rocketchip.subsystem.WithNoMemPort ++
-  new freechips.rocketchip.subsystem.WithScratchpadsOnly ++    // use rocket l1 DCache scratchpad as base phys mem
-  new freechips.rocketchip.subsystem.WithNBigCores(1) ++
+  new CometCoreConfig ++
   new CometBaseConfig
 )
 
