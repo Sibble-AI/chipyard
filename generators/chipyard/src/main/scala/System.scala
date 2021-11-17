@@ -33,15 +33,20 @@ class ChipyardSystem(implicit p: Parameters) extends ChipyardSubsystem
   val maskROMs = p(MaskROMLocated(location)).map { MaskROM.attach(_, this, CBUS) }
   override lazy val module = new ChipyardSystemModule(this)
 
-  // If no boot ROM is present, set the reset vector to MMIO base address
-  if (bootROM.isEmpty && maskROMs.isEmpty) {
-    val resetVectorSourceNode = BundleBridgeSource[UInt]()
+  if (bootROM.isEmpty) {
 
+    val resetVectorSourceNode = BundleBridgeSource[UInt]()
     tileResetVectorNexusNode := resetVectorSourceNode
+
+    val rvAddr = p(MaskROMLocated(location)).headOption.map(_.address).getOrElse {
+      // If no boot ROM is present, set the reset vector to MMIO base address
+      assert(p(ExtBus).isDefined)
+      p(ExtBus).get.base
+    }
 
     InModuleBody {
       val reset_vector_source = resetVectorSourceNode.bundle
-      resetVectorSourceNode.bundle := 0x80000000L.U // TODO parameterize
+      resetVectorSourceNode.bundle := rvAddr.U
     }
   }
 

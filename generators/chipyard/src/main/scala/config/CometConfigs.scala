@@ -2,10 +2,10 @@ package chipyard
 
 import freechips.rocketchip.config.{Config, Parameters}
 import freechips.rocketchip.diplomacy.{AsynchronousCrossing, SynchronousCrossing}
-import freechips.rocketchip.devices.tilelink.{BootROMLocated}
+import freechips.rocketchip.devices.tilelink.{BootROMLocated, MaskROMLocated, MaskROMParams}
 import freechips.rocketchip.tile.{XLen, RocketTileParams}
 import freechips.rocketchip.rocket.{RocketCoreParams, ICacheParams, DCacheParams, MulDivParams}
-import freechips.rocketchip.subsystem.{RocketTilesKey, RocketCrossingKey, RocketCrossingParams, TileMasterPortParams, SystemBusKey, SystemBusParams, CacheBlockBytes}
+import freechips.rocketchip.subsystem.{RocketTilesKey, RocketCrossingKey, RocketCrossingParams, TileMasterPortParams, SystemBusKey, SystemBusParams, CacheBlockBytes, InSubsystem}
 
 class WithComet extends Config((site, here, up) => {
   case BuildTop => (p: Parameters) => new CometCPUComplex()(p)
@@ -79,6 +79,12 @@ class CometCoreConfig extends Config((site, here, up) => {
   case RocketCrossingKey => List(RocketCrossingParams(
     crossingType = SynchronousCrossing(),
     master = TileMasterPortParams()
+  ))
+  case MaskROMLocated(InSubsystem) => Seq(MaskROMParams(
+    address = BigInt(0x10000),
+    name = "CometROM",
+    depth = 1024,
+    width = 32
   ))
 })
 
