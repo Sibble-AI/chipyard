@@ -5,7 +5,8 @@ import freechips.rocketchip.diplomacy.{AsynchronousCrossing, SynchronousCrossing
 import freechips.rocketchip.devices.tilelink.{BootROMLocated, MaskROMLocated, MaskROMParams}
 import freechips.rocketchip.tile.{XLen, RocketTileParams}
 import freechips.rocketchip.rocket.{RocketCoreParams, ICacheParams, DCacheParams, MulDivParams}
-import freechips.rocketchip.subsystem.{RocketTilesKey, RocketCrossingKey, RocketCrossingParams, TileMasterPortParams, SystemBusKey, SystemBusParams, CacheBlockBytes, InSubsystem}
+import freechips.rocketchip.subsystem.{RocketTilesKey, RocketCrossingKey, RocketCrossingParams, TileMasterPortParams,
+  FrontBusKey, SystemBusKey, SystemBusParams, CacheBlockBytes, InSubsystem}
 
 class WithComet extends Config((site, here, up) => {
   case BuildTop => (p: Parameters) => new CometCPUComplex()(p)
@@ -14,9 +15,10 @@ class WithComet extends Config((site, here, up) => {
 
 class CometBaseConfig extends Config(
   new WithComet ++
+
   // Test harness features
   new chipyard.harness.WithUARTAdapter ++                       // add UART adapter to display UART on stdout, if uart is present
-  new chipyard.harness.WithBlackBoxSimMem ++                    // add SimDRAM DRAM model for axi4 backing memory, if axi4 mem is enabled
+  new chipyard.harness.WithSimAXIMem ++                         // don't use DRAM sim because it doesn't support > 64 bits
   new chipyard.harness.WithSimDebug ++                          // add SimJTAG or SimDTM adapters if debug module is enabled
   new chipyard.harness.WithGPIOTiedOff ++                       // tie-off chiptop GPIOs, if GPIOs are present
   new chipyard.harness.WithSimSPIFlashModel ++                  // add simulated SPI flash memory, if SPI is enabled
@@ -41,6 +43,7 @@ class CometBaseConfig extends Config(
   new chipyard.iobinders.WithDividerOnlyClockGenerator ++
 
   // Design configuration
+  new freechips.rocketchip.subsystem.WithEdgeDataBits(128) ++    // 128-bit mbus and mmio
   new chipyard.config.WithUART ++                                // add a UART
   new chipyard.config.WithL2TLBs(1024) ++                        // use L2 TLBs
   new chipyard.config.WithNoSubsystemDrivenClocks ++             // drive the subsystem diplomatic clocks from ChipTop instead of using implicit clocks
