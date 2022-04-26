@@ -7,10 +7,16 @@ import freechips.rocketchip.tile.{XLen, RocketTileParams}
 import freechips.rocketchip.rocket.{RocketCoreParams, ICacheParams, DCacheParams, MulDivParams}
 import freechips.rocketchip.subsystem.{RocketTilesKey, RocketCrossingKey, RocketCrossingParams, TileMasterPortParams,
   FrontBusKey, SystemBusKey, SystemBusParams, CacheBlockBytes, InSubsystem}
+import sifive.blocks.devices.uart._
 
 class WithComet extends Config((site, here, up) => {
   case BuildTop => (p: Parameters) => new CometCPUComplex()(p)
   case BootROMLocated(x) => None
+})
+
+class WithCometUART(baudrate: BigInt = 115200) extends Config((site, here, up) => {
+  case PeripheryUARTKey => Seq(
+    UARTParams(address = 0x34000000L, nTxEntries = 256, nRxEntries = 256, initBaudRate = baudrate))
 })
 
 class CometBaseConfig extends Config(
@@ -44,7 +50,7 @@ class CometBaseConfig extends Config(
 
   // Design configuration
   new freechips.rocketchip.subsystem.WithEdgeDataBits(128) ++    // 128-bit mbus and mmio
-  new chipyard.config.WithUART ++                                // add a UART
+  new chipyard.WithCometUART ++                                  // add a UART
   new chipyard.config.WithL2TLBs(1024) ++                        // use L2 TLBs
   new chipyard.config.WithNoSubsystemDrivenClocks ++             // drive the subsystem diplomatic clocks from ChipTop instead of using implicit clocks
   new chipyard.config.WithInheritBusFrequencyAssignments ++      // Unspecified clocks within a bus will receive the bus frequency if set
