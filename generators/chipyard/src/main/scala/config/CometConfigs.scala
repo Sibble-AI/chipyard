@@ -72,6 +72,7 @@ class CometCoreConfig extends Config((site, here, up) => {
   case RocketTilesKey => List(RocketTileParams(
       core = RocketCoreParams(
         useVM = false,
+        useUser = true,
         mulDiv = Some(MulDivParams(mulUnroll = 8, mulEarlyOut = true, divEarlyOut = true))),
       dcache = Some(DCacheParams(
         rowBits = site(SystemBusKey).beatBits,
